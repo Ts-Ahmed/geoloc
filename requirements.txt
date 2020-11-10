@@ -1,1 +1,2 @@
 pyubx2
+pyserial
