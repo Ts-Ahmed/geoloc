@@ -2,7 +2,7 @@ from time import sleep
 
 from pyubx2 import UBXMessage, POLL
 
-from UBXStreamer import UBXStreamer
+from ubxstreamer import UBXStreamer
 
 if __name__ == "__main__":
 
