@@ -1,15 +1,12 @@
-from sys import platform
 from io import BufferedReader
 from threading import Thread
 from time import sleep
 
-from pyubx2 import UBXMessage, POLL, UBX_CONFIG_MESSAGES, SET, GET
+from pyubx2 import UBXMessage, POLL
 from pyubx2.ubxreader import UBXReader
-from pyubx2.exceptions import UBXStreamError
 from serial import Serial, SerialException, SerialTimeoutException
 
 import pyubx2.exceptions as ube
-import pyubx2.ubxtypes_core as ubt
 
 
 class UBXStreamer:
