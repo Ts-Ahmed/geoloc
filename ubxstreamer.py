@@ -115,8 +115,11 @@ class UBXStreamer:
                     (raw_data, parsed_data) = self._ubxreader.read()
                     if parsed_data:
                         print(parsed_data)
+
+                        self.ephemeris.set_data(raw_data)  # Fills up the ephemeris class
+
                         # print(raw_data)
-                        print(raw_data.hex(sep=' ', bytes_per_sep=2))
+                        # print(raw_data.hex(sep=' ', bytes_per_sep=2))
                 except (ube.UBXStreamError, ube.UBXMessageError, ube.UBXTypeError,
                         ube.UBXParseError) as err:
                     print(f"Something went wrong {err}")
