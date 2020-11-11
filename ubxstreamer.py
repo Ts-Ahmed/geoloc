@@ -120,7 +120,7 @@ class UBXStreamer:
                         self.ephemeris_raw.set_data(raw_data)  # Fills up the ephemeris class
                         if not self.ephemeris_raw.sf_empty:
                             self.ephemeris_parsed = Ephemeris_Parsed(self.ephemeris_raw)
-                            print(self.ephemeris_parsed.crs)
+                            self.ephemeris_parsed.special_print()
                         # print(raw_data)
                         # print(raw_data.hex(sep=' ', bytes_per_sep=2))
                 except (ube.UBXStreamError, ube.UBXMessageError, ube.UBXTypeError,
