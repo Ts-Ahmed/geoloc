@@ -6,7 +6,7 @@ from serial import Serial, SerialException, SerialTimeoutException
 
 import pyubx2.exceptions as ube
 
-from ephemeris import Ephemeris
+from ephemeris import Ephemeris_Raw, Ephemeris_Parsed
 
 
 class UBXStreamer:
@@ -27,7 +27,8 @@ class UBXStreamer:
         self._port = port
         self._baudrate = baudrate
         self._timeout = timeout
-        self.ephemeris = Ephemeris()
+        self.ephemeris_raw = Ephemeris_Raw()
+        self.ephemeris_parsed = None
 
     def __del__(self):
         """
@@ -116,8 +117,10 @@ class UBXStreamer:
                     if parsed_data:
                         print(parsed_data)
 
-                        self.ephemeris.set_data(raw_data)  # Fills up the ephemeris class
-
+                        self.ephemeris_raw.set_data(raw_data)  # Fills up the ephemeris class
+                        if not self.ephemeris_raw.sf_empty:
+                            self.ephemeris_parsed = Ephemeris_Parsed(self.ephemeris_raw)
+                            print(self.ephemeris_parsed.crs)
                         # print(raw_data)
                         # print(raw_data.hex(sep=' ', bytes_per_sep=2))
                 except (ube.UBXStreamError, ube.UBXMessageError, ube.UBXTypeError,

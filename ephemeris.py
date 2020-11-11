@@ -1,4 +1,4 @@
-class Ephemeris:
+class Ephemeris_Raw:
     def __init__(self) -> None:
         """
         Constructor.
@@ -8,6 +8,7 @@ class Ephemeris:
 
         self.svid = None
         self.how = None
+        self.sf_empty = True
         self.sf1 = Subframe()
         self.sf2 = Subframe()
         self.sf3 = Subframe()
@@ -27,6 +28,7 @@ class Ephemeris:
         self.how = Word(int.from_bytes(raw_data_payload[0:4], "little", signed=False))
         raw_data_payload = raw_data_payload[4:]
         if lenp > 8:
+            self.sf_empty = False
             for i, attr in zip(range(8), ("word3",
                                           "word4",
                                           "word5",
@@ -41,6 +43,8 @@ class Ephemeris:
                         Word(int.from_bytes(raw_data_payload[32 + i*4:32 + i*4 + 4], "little", signed=False)))
                 setattr(self.sf3, attr,
                         Word(int.from_bytes(raw_data_payload[64 + i*4:64 + i*4 + 4], "little", signed=False)))
+        else:
+            self.sf_empty = True
                 
 
 class Subframe:
@@ -70,3 +74,43 @@ class Word:
         """
         self.dec = value
         self.bin = bin(value)[2:].zfill(24) if isinstance(value, int) else None
+
+
+class Ephemeris_Parsed:
+    def __init__(self, eph_raw: Ephemeris_Raw):
+        """
+        Constructor.
+
+        :param eph_raw: Ephemeris_Raw:
+        """
+        self.svid = eph_raw.svid
+        self.tgd = twos_comp(int(eph_raw.sf1.word7.bin[16:], 2), 8) * (2 ** -31)
+        self.iodc = int(eph_raw.sf1.word3.bin[22:] + eph_raw.sf1.word8.bin[:8], 2)
+        self.toc = int(eph_raw.sf1.word8.bin[8:], 2) * (2 ** 4)
+        self.af2 = twos_comp(int(eph_raw.sf1.word9.bin[:8], 2), 8) * (2 ** -55)
+        self.af1 = twos_comp(int(eph_raw.sf1.word9.bin[8:], 2), 16) * (2 ** -43)
+        self.af0 = twos_comp(int(eph_raw.sf1.word10.bin[:22], 2), 22) * (2 ** -31)
+        self.iode = int(eph_raw.sf2.word3.bin[:8], 2)
+        self.crs = twos_comp(int(eph_raw.sf2.word3.bin[8:], 2), 16) * (2 ** -5)
+        self.delta_n = twos_comp(int(eph_raw.sf2.word4.bin[:16], 2), 16) * (2 ** -43)
+        self.m0 = twos_comp(int(eph_raw.sf2.word4.bin[16:] + eph_raw.sf2.word5.bin, 2), 32) * (2 ** -31)
+        self.cuc = twos_comp(int(eph_raw.sf2.word6.bin[:16], 2), 16) * (2 ** -29)
+        self.e = int(eph_raw.sf2.word6.bin[16:] + eph_raw.sf2.word7.bin, 2) * (2 ** -33)
+        self.cus = twos_comp(int(eph_raw.sf2.word8.bin[:16], 2), 16) * (2 ** -29)
+        self.sqrt_a = int(eph_raw.sf2.word8.bin[16:] + eph_raw.sf2.word9.bin, 2) * (2 ** -19)
+        self.toe = int(eph_raw.sf2.word10.bin[:16], 2) * (2 ** 4)
+        self.cic = twos_comp(int(eph_raw.sf3.word3.bin[:16], 2), 16) * (2 ** -29)
+        self.omega0 = twos_comp(int(eph_raw.sf3.word3.bin[16:] + eph_raw.sf3.word4.bin, 2), 32) * (2 ** -31)
+        self.cis = twos_comp(int(eph_raw.sf3.word5.bin[:16], 2), 16) * (2 ** -29)
+        self.i0 = twos_comp(int(eph_raw.sf3.word5.bin[16:] + eph_raw.sf3.word6.bin, 2), 32) * (2 ** -31)
+        self.crc = twos_comp(int(eph_raw.sf3.word7.bin[:16], 2), 16) * (2 ** -5)
+        self.omega = twos_comp(int(eph_raw.sf3.word7.bin[16:] + eph_raw.sf3.word8.bin, 2), 32) * (2 ** -31)
+        self.omega_dot = twos_comp(int(eph_raw.sf3.word9.bin, 2), 24) * (2 ** -43)
+        self.idot = twos_comp(int(eph_raw.sf3.word10.bin[8:-2], 2), 14) * (2 ** -43)
+
+
+def twos_comp(val, bits):
+    """compute the 2's complement of int value val"""
+    if (val & (1 << (bits - 1))) != 0: # if sign bit is set e.g., 8bit: 128-255
+        val = val - (1 << bits)        # compute negative value
+    return val                         # return positive value as is
