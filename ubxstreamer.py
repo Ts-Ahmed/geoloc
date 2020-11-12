@@ -7,6 +7,7 @@ from serial import Serial, SerialException, SerialTimeoutException
 import pyubx2.exceptions as ube
 
 from ephemeris import Ephemeris_Raw, Ephemeris_Parsed
+from gpssystime import GpsSysTime
 
 
 class UBXStreamer:
@@ -29,6 +30,7 @@ class UBXStreamer:
         self._timeout = timeout
         self.ephemeris_raw = Ephemeris_Raw()
         self.ephemeris_parsed = None
+        self.gps_sys_time = GpsSysTime()
 
     def __del__(self):
         """
@@ -117,12 +119,14 @@ class UBXStreamer:
                     if parsed_data:
                         print(parsed_data)
 
-                        self.ephemeris_raw.set_data(raw_data)  # Fills up the ephemeris class
-                        if not self.ephemeris_raw.sf_empty:
-                            self.ephemeris_parsed = Ephemeris_Parsed(self.ephemeris_raw)
-                            self.ephemeris_parsed.special_print()
-                        # print(raw_data)
-                        # print(raw_data.hex(sep=' ', bytes_per_sep=2))
+                        self.gps_sys_time.set_data(raw_data)
+                        print("GPS System time: ", self.gps_sys_time.time)
+
+                        # self.ephemeris_raw.set_data(raw_data)  # Fills up the ephemeris class
+                        # if not self.ephemeris_raw.sf_empty:
+                        #     self.ephemeris_parsed = Ephemeris_Parsed(self.ephemeris_raw)
+                        #     self.ephemeris_parsed.special_print()
+
                 except (ube.UBXStreamError, ube.UBXMessageError, ube.UBXTypeError,
                         ube.UBXParseError) as err:
                     print(f"Something went wrong {err}")

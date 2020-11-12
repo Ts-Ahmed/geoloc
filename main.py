@@ -1,7 +1,5 @@
 from time import sleep
-
 from pyubx2 import UBXMessage, POLL
-
 from ubxstreamer import UBXStreamer
 
 if __name__ == "__main__":
@@ -19,10 +17,9 @@ if __name__ == "__main__":
     ubp.start_read_thread()
 
     print("\nPolling receiver...\n\n")
-    msg = UBXMessage('AID', 'AID-EPH', POLL)
-    # msg = UBXMessage('AID', 'AID-ALM', POLL)
-    # msg = UBXMessage('CFG', 'CFG-GEOFENCE', POLL)
+    # msg = UBXMessage('AID', 'AID-EPH', POLL)
     # msg = UBXMessage('RXM', 'RXM-RAWX', POLL)
+    msg = UBXMessage('NAV', 'NAV-TIMEGPS', POLL)
     ubp.send(msg.serialize())
 
     sleep(3)
