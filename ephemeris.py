@@ -1,3 +1,6 @@
+from config import twos_comp
+
+
 class Ephemeris_Raw:
     def __init__(self) -> None:
         """
@@ -107,17 +110,3 @@ class Ephemeris_Parsed:
         self.omega = twos_comp(int(eph_raw.sf3.word7.bin[16:] + eph_raw.sf3.word8.bin, 2), 32) * (2 ** -31)
         self.omega_dot = twos_comp(int(eph_raw.sf3.word9.bin, 2), 24) * (2 ** -43)
         self.idot = twos_comp(int(eph_raw.sf3.word10.bin[8:-2], 2), 14) * (2 ** -43)
-
-    def special_print(self) -> None:
-        attr_list = [attr for attr in dir(self) if not attr.startswith('__') and not attr.startswith('special')]
-        str_rtr = ''
-        for attr in attr_list:
-            str_rtr += attr + " = " + str(getattr(self, attr)) + "   "
-        print(str_rtr[:-1])
-
-
-def twos_comp(val, bits):
-    """compute the 2's complement of int value val"""
-    if (val & (1 << (bits - 1))) != 0: # if sign bit is set e.g., 8bit: 128-255
-        val = val - (1 << bits)        # compute negative value
-    return val                         # return positive value as is
