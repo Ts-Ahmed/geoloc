@@ -17,10 +17,10 @@ if __name__ == "__main__":
     ubp.start_read_thread()
 
     print("\nPolling receiver...\n\n")
-    # msg = UBXMessage('AID', 'AID-EPH', POLL)
+    msg1 = UBXMessage('AID', 'AID-EPH', POLL)
+    msg2 = UBXMessage('NAV', 'NAV-TIMEGPS', POLL)
     # msg = UBXMessage('RXM', 'RXM-RAWX', POLL)
-    msg = UBXMessage('NAV', 'NAV-TIMEGPS', POLL)
-    ubp.send(msg.serialize())
+    ubp.send(msg1.serialize(), msg2.serialize())
 
     sleep(3)
 

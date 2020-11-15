@@ -28,8 +28,8 @@ class UBXStreamer:
         self._port = port
         self._baudrate = baudrate
         self._timeout = timeout
-        self.ephemeris_raw = Ephemeris_Raw()
-        self.ephemeris_parsed = None
+        self.ephemeris_raw = {i: Ephemeris_Raw() for i in range(32)}
+        self.ephemeris_parsed = {i: None for i in range(32)}
         self.gps_sys_time = GpsSysTime()
 
     def __del__(self):
@@ -85,12 +85,13 @@ class UBXStreamer:
             self._reading = False
             self._serial_thread.join()
 
-    def send(self, data):
+    def send(self, data1, data2):
         """
         Send data to serial connection.
         """
 
-        self._serial_object.write(data)
+        for data in (data1, data2):
+            self._serial_object.write(data)
 
     def flush(self):
         """
@@ -119,13 +120,15 @@ class UBXStreamer:
                     if parsed_data:
                         print(parsed_data)
 
-                        self.gps_sys_time.set_data(raw_data)
-                        print("GPS System time: ", self.gps_sys_time.time)
-
-                        # self.ephemeris_raw.set_data(raw_data)  # Fills up the ephemeris class
-                        # if not self.ephemeris_raw.sf_empty:
-                        #     self.ephemeris_parsed = Ephemeris_Parsed(self.ephemeris_raw)
-                        #     self.ephemeris_parsed.special_print()
+                        if hasattr(parsed_data, "svid"):
+                            self.ephemeris_raw[parsed_data.svid - 1].set_data(raw_data)  # Fills up the ephemeris class
+                            if not self.ephemeris_raw[parsed_data.svid - 1].sf_empty:
+                                self.ephemeris_parsed[parsed_data.svid - 1] = \
+                                    Ephemeris_Parsed(self.ephemeris_raw[parsed_data.svid - 1])
+                                self.ephemeris_parsed[parsed_data.svid - 1].special_print()
+                        if hasattr(parsed_data, "iTOW"):
+                            self.gps_sys_time.set_data(raw_data)
+                            print("GPS System time: ", self.gps_sys_time.time)
 
                 except (ube.UBXStreamError, ube.UBXMessageError, ube.UBXTypeError,
                         ube.UBXParseError) as err:
