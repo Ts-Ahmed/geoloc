@@ -5,7 +5,7 @@ from ubxstreamer import UBXStreamer
 if __name__ == "__main__":
 
     # set PORT, BAUDRATE and TIMEOUT as appropriate
-    PORT = 'COM11'
+    PORT = 'COM5'
     BAUDRATE = 9600
     TIMEOUT = 0
 

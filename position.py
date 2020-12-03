@@ -6,6 +6,9 @@ from gpssystime import GpsSysTime
 
 
 def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
+    af0 = eph.af0
+    af1 = eph.af1
+    af2 = eph.af2
     m0 = eph.m0
     delta_n = eph.delta_n
     a = eph.sqrt_a ** 2
@@ -22,8 +25,18 @@ def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     i0 = eph.i0
     idot = eph.idot
     toe = eph.toe
+    toc = eph.toc
 
-    Tk = gps.time - toe
+    t_sv = gps.time
+
+    # On met les effets relativistes à 0 car on n'a pas encore calculé Ek
+    delta_tr = 0
+    # Correction globale (dérive + effet rel)
+    delta_t_sv = af0 + af1 * (t_sv - toc) + af2 * (t_sv - toc) ** 2 + delta_tr
+    t = t_sv - delta_t_sv
+    # t = t - tpdist # tpdist est la pseudo distance ?
+    Tk = t - toe
+    # Tk = gps.time - toe
     if Tk > 302400:
         Tk -= 604800
     elif Tk < -302400:
@@ -34,6 +47,17 @@ def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     Mk = m0 + N * Tk
 
     Ek = kepler_solve(Mk, ecc)
+    # Offset de Correction relativiste
+    delta_tr = (-4.442807633**-10) * ecc * sqrt(a) * sin(Ek)
+
+    # Recalcul de Tk
+    delta_t_sv = af0 + af1 * (t_sv - toc) + af2 * ((t_sv - toc) ** 2) + delta_tr
+    t = t_sv - delta_t_sv
+    Tk = t - toe
+    if Tk > 302400:
+        Tk -= 604800
+    elif Tk < -302400:
+        Tk += 604800
 
     sinVk = (sin(Ek) * sqrt(1 - ecc**2)) / (1 - ecc * cos(Ek))
 
