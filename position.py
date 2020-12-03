@@ -7,7 +7,7 @@ from gpssystime import GpsSysTime
 
 def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     m0 = eph.m0
-    dn = eph.delta_n
+    delta_n = eph.delta_n
     a = eph.sqrt_a ** 2
     ecc = eph.e
     omega = eph.omega
@@ -29,7 +29,9 @@ def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     elif Tk < -302400:
         Tk += 604800
 
-    Mk = m0 + ((sqrt(MU) / sqrt(a ** 3)) + dn) * Tk
+    N = sqrt(MU / (a ** 3)) + delta_n
+
+    Mk = m0 + N * Tk
 
     Ek = kepler_solve(Mk, ecc)
 
