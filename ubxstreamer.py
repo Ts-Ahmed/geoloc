@@ -9,7 +9,7 @@ import pyubx2.exceptions as ube
 
 from ephemeris import Ephemeris_Raw, Ephemeris_Parsed
 from gpssystime import GpsSysTime
-from position import get_wgs84_position
+from position import get_wgs84_position, xyz_to_latlongalt
 
 
 class UBXStreamer:
@@ -122,8 +122,8 @@ class UBXStreamer:
                     (raw_data, parsed_data) = self._ubxreader.read()
                     if parsed_data:
                         # print(parsed_data)
-                        if hasattr(parsed_data, "svid"): print('svid: ', parsed_data.svid)
                         if hasattr(parsed_data, "svid"):
+                            print('svid: ', parsed_data.svid)
                             self.ephemeris_raw[parsed_data.svid - 1].set_data(raw_data)  # Fills up the ephemeris class
 
                             if not self.ephemeris_raw[parsed_data.svid - 1].sf_empty:
@@ -137,9 +137,11 @@ class UBXStreamer:
 
                         if hasattr(parsed_data, "svid") and \
                                 self.ephemeris_parsed[parsed_data.svid - 1] is not None:
-                            position = get_wgs84_position(self.ephemeris_parsed[parsed_data.svid - 1],
-                                                          self.gps_sys_time.time)
-                            print(position)
+                            X, Y, Z = get_wgs84_position(self.ephemeris_parsed[parsed_data.svid - 1],
+                                                         self.gps_sys_time.time)
+                            print("XYZ: ", (X, Y, Z))
+                            Lat, Long, Alt = xyz_to_latlongalt(X, Y, Z)
+                            print("LatLongAlt: ", (Lat, Long, Alt))
 
                 except (ube.UBXStreamError, ube.UBXMessageError, ube.UBXTypeError,
                         ube.UBXParseError) as err:
