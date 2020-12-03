@@ -5,7 +5,7 @@ from ephemeris import Ephemeris_Parsed
 from gpssystime import GpsSysTime
 
 
-def get_wgs84_position(eph: Ephemeris_Parsed, gps_time: GpsSysTime):
+def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     m0 = eph.m0
     dn = eph.delta_n
     a = eph.sqrt_a ** 2
@@ -23,7 +23,7 @@ def get_wgs84_position(eph: Ephemeris_Parsed, gps_time: GpsSysTime):
     idot = eph.idot
     toe = eph.toe
 
-    Tk = gps_time - toe
+    Tk = gps.time - toe
     if Tk > 302400:
         Tk -= 604800
     elif Tk < -302400:

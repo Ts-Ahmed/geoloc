@@ -138,7 +138,7 @@ class UBXStreamer:
                         if hasattr(parsed_data, "svid") and \
                                 self.ephemeris_parsed[parsed_data.svid - 1] is not None:
                             X, Y, Z = get_wgs84_position(self.ephemeris_parsed[parsed_data.svid - 1],
-                                                         self.gps_sys_time.time)
+                                                         self.gps_sys_time)
                             print("XYZ: ", (X, Y, Z))
                             Lat, Long, Alt = xyz_to_latlongalt(X, Y, Z)
                             print("LatLongAlt: ", (Lat, Long, Alt))
