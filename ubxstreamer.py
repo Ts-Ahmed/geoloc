@@ -121,12 +121,16 @@ class UBXStreamer:
                 try:
                     (raw_data, parsed_data) = self._ubxreader.read()
                     if parsed_data:
-                        # print(parsed_data)
-                        if hasattr(parsed_data, "iTOW"):
+                        if hasattr(parsed_data, "iTOW") and hasattr(parsed_data, "fTOW"):
+                            print(parsed_data)
                             self.gps_sys_time.set_data(raw_data)
                             print("GPS System time: ", self.gps_sys_time.time)
 
-                        if hasattr(parsed_data, "svid"):
+                        if hasattr(parsed_data, "dwrd_01"):
+                            print(parsed_data)
+
+                        if hasattr(parsed_data, "how") and parsed_data.how != 0:
+                            print(parsed_data)
                             print('svid: ', parsed_data.svid)
                             self.ephemeris_raw[parsed_data.svid - 1].set_data(raw_data)  # Fills up the ephemeris class
 
@@ -135,8 +139,9 @@ class UBXStreamer:
                                     Ephemeris_Parsed(self.ephemeris_raw[parsed_data.svid - 1])
                                 self.ephemeris_parsed[parsed_data.svid - 1].special_print()
 
-                        if hasattr(parsed_data, "svid") and \
+                        if hasattr(parsed_data, "how") and parsed_data.how != 0 and \
                                 self.ephemeris_parsed[parsed_data.svid - 1] is not None:
+                            print(parsed_data)
                             X, Y, Z = get_wgs84_position(self.ephemeris_parsed[parsed_data.svid - 1],
                                                          self.gps_sys_time)
                             print("XYZ: ", (X, Y, Z))

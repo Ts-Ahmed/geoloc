@@ -34,7 +34,7 @@ def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     # Correction globale (dérive + effet rel)
     delta_t_sv = af0 + af1 * (t_sv - toc) + af2 * (t_sv - toc) ** 2 + delta_tr
     t = t_sv - delta_t_sv
-    # t = t - tpdist # tpdist est la pseudo distance ?
+    # t = t - tpdist
     Tk = t - toe
     # Tk = gps.time - toe
     if Tk > 302400:
@@ -42,7 +42,9 @@ def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     elif Tk < -302400:
         Tk += 604800
 
-    N = sqrt(MU / (a ** 3)) + delta_n
+    n0 = sqrt(MU / (a ** 3))
+
+    N = n0 + delta_n
 
     Mk = m0 + N * Tk
 
@@ -53,6 +55,7 @@ def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     # Recalcul de Tk
     delta_t_sv = af0 + af1 * (t_sv - toc) + af2 * ((t_sv - toc) ** 2) + delta_tr
     t = t_sv - delta_t_sv
+    # t = t - tpdist
     Tk = t - toe
     if Tk > 302400:
         Tk -= 604800
