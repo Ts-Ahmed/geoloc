@@ -93,7 +93,7 @@ class Ephemeris_Parsed:
         self.af2 = twos_comp(int(eph_raw.sf1.word9.bin[:8], 2), 8) * (2 ** -55)
         self.af1 = twos_comp(int(eph_raw.sf1.word9.bin[8:], 2), 16) * (2 ** -43)
         self.af0 = twos_comp(int(eph_raw.sf1.word10.bin[:22], 2), 22) * (2 ** -31)
-        self.iode = int(eph_raw.sf2.word3.bin[:8], 2)
+        self.iode = int(eph_raw.sf2.word3.bin[:8], 2)  # Found in two different subframes for some reason ...
         self.crs = twos_comp(int(eph_raw.sf2.word3.bin[8:], 2), 16) * (2 ** -5)
         self.delta_n = twos_comp(int(eph_raw.sf2.word4.bin[:16], 2), 16) * (2 ** -43)
         self.m0 = twos_comp(int(eph_raw.sf2.word4.bin[16:] + eph_raw.sf2.word5.bin, 2), 32) * (2 ** -31)

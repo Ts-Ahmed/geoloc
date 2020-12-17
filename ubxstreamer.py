@@ -7,6 +7,7 @@ from serial import Serial, SerialException, SerialTimeoutException
 
 import pyubx2.exceptions as ube
 
+from almanac import Almanac_Raw, Almanac_Parsed
 from ephemeris import Ephemeris_Raw, Ephemeris_Parsed
 from gpssystime import GpsSysTime
 from position import get_wgs84_position, xyz_to_latlongalt
@@ -32,6 +33,8 @@ class UBXStreamer:
         self._timeout = timeout
         self.ephemeris_raw = {i: Ephemeris_Raw() for i in range(32)}
         self.ephemeris_parsed = {i: None for i in range(32)}
+        self.almanac_raw = {i: Almanac_Raw() for i in range(32)}
+        self.almanac_parsed = {i: None for i in range(32)}
         self.gps_sys_time = GpsSysTime()
 
     def __del__(self):
@@ -128,6 +131,12 @@ class UBXStreamer:
 
                         if hasattr(parsed_data, "dwrd_01"):
                             print(parsed_data)
+                            self.almanac_raw[parsed_data.svid - 1].set_data(raw_data)  # Fills up the ephemeris class
+                            if not self.almanac_raw[parsed_data.svid - 1].sf_empty:
+                                self.almanac_parsed[parsed_data.svid - 1] = \
+                                    Almanac_Parsed(self.almanac_raw[parsed_data.svid - 1])
+                                self.almanac_parsed[parsed_data.svid - 1].special_print()
+                                print("\n")
 
                         if hasattr(parsed_data, "how") and parsed_data.how != 0:
                             print(parsed_data)
