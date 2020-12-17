@@ -57,6 +57,7 @@ def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     t = t_sv - delta_t_sv
     # t = t - tpdist
     Tk = t - toe
+    # Tk = gps.time - toe
     if Tk > 302400:
         Tk -= 604800
     elif Tk < -302400:
