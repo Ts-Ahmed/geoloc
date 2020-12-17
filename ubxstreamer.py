@@ -150,7 +150,6 @@ class UBXStreamer:
 
                         if hasattr(parsed_data, "how") and parsed_data.how != 0 and \
                                 self.ephemeris_parsed[parsed_data.svid - 1] is not None:
-                            print(parsed_data)
                             X, Y, Z = get_wgs84_position(self.ephemeris_parsed[parsed_data.svid - 1],
                                                          self.gps_sys_time)
                             print("XYZ: ", (X, Y, Z))
