@@ -123,11 +123,14 @@ class UBXStreamer:
             if self._serial_object.in_waiting:
                 try:
                     (raw_data, parsed_data) = self._ubxreader.read()
+                    if parsed_data is not None:
+                        print(parsed_data)
                     if parsed_data:
                         if hasattr(parsed_data, "iTOW") and hasattr(parsed_data, "fTOW"):
                             print(parsed_data)
                             self.gps_sys_time.set_data(raw_data)
                             print("GPS System time: ", self.gps_sys_time.time)
+                            print("\n")
 
                         if hasattr(parsed_data, "dwrd_01"):
                             print(parsed_data)

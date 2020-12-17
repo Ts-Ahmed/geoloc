@@ -18,7 +18,8 @@ if __name__ == "__main__":
 
     print("\nPolling receiver...\n\n")
     msg1 = UBXMessage('NAV', 'NAV-TIMEGPS', POLL)
-    msg2 = UBXMessage('AID', 'AID-EPH', POLL)
+    # msg2 = UBXMessage('AID', 'AID-EPH', POLL)
+    msg2 = UBXMessage('RXM', 'RXM-RAW', POLL)
     # msg2 = UBXMessage('NAV', 'NAV-SVINFO', POLL)
     # msg2 = UBXMessage('AID', 'AID-ALM', POLL)
     ubxs.send(msg1.serialize(), msg2.serialize())
