@@ -1,3 +1,5 @@
+import math
+
 from config import twos_comp
 
 
@@ -95,21 +97,21 @@ class Ephemeris_Parsed:
         self.af0 = twos_comp(int(eph_raw.sf1.word10.bin[:22], 2), 22) * (2 ** -31)
         self.iode = int(eph_raw.sf2.word3.bin[:8], 2)  # Found in two different subframes for some reason ...
         self.crs = twos_comp(int(eph_raw.sf2.word3.bin[8:], 2), 16) * (2 ** -5)
-        self.delta_n = twos_comp(int(eph_raw.sf2.word4.bin[:16], 2), 16) * (2 ** -43)
-        self.m0 = twos_comp(int(eph_raw.sf2.word4.bin[16:] + eph_raw.sf2.word5.bin, 2), 32) * (2 ** -31)
+        self.delta_n = twos_comp(int(eph_raw.sf2.word4.bin[:16], 2), 16) * (2 ** -43) * math.pi
+        self.m0 = twos_comp(int(eph_raw.sf2.word4.bin[16:] + eph_raw.sf2.word5.bin, 2), 32) * (2 ** -31) * math.pi
         self.cuc = twos_comp(int(eph_raw.sf2.word6.bin[:16], 2), 16) * (2 ** -29)
         self.e = int(eph_raw.sf2.word6.bin[16:] + eph_raw.sf2.word7.bin, 2) * (2 ** -33)
         self.cus = twos_comp(int(eph_raw.sf2.word8.bin[:16], 2), 16) * (2 ** -29)
         self.sqrt_a = int(eph_raw.sf2.word8.bin[16:] + eph_raw.sf2.word9.bin, 2) * (2 ** -19)
         self.toe = int(eph_raw.sf2.word10.bin[:16], 2) * (2 ** 4)
         self.cic = twos_comp(int(eph_raw.sf3.word3.bin[:16], 2), 16) * (2 ** -29)
-        self.omega0 = twos_comp(int(eph_raw.sf3.word3.bin[16:] + eph_raw.sf3.word4.bin, 2), 32) * (2 ** -31)
+        self.omega0 = twos_comp(int(eph_raw.sf3.word3.bin[16:] + eph_raw.sf3.word4.bin, 2), 32) * (2 ** -31) * math.pi
         self.cis = twos_comp(int(eph_raw.sf3.word5.bin[:16], 2), 16) * (2 ** -29)
-        self.i0 = twos_comp(int(eph_raw.sf3.word5.bin[16:] + eph_raw.sf3.word6.bin, 2), 32) * (2 ** -31)
+        self.i0 = twos_comp(int(eph_raw.sf3.word5.bin[16:] + eph_raw.sf3.word6.bin, 2), 32) * (2 ** -31) * math.pi
         self.crc = twos_comp(int(eph_raw.sf3.word7.bin[:16], 2), 16) * (2 ** -5)
-        self.omega = twos_comp(int(eph_raw.sf3.word7.bin[16:] + eph_raw.sf3.word8.bin, 2), 32) * (2 ** -31)
-        self.omega_dot = twos_comp(int(eph_raw.sf3.word9.bin, 2), 24) * (2 ** -43)
-        self.idot = twos_comp(int(eph_raw.sf3.word10.bin[8:-2], 2), 14) * (2 ** -43)
+        self.omega = twos_comp(int(eph_raw.sf3.word7.bin[16:] + eph_raw.sf3.word8.bin, 2), 32) * (2 ** -31) * math.pi
+        self.omega_dot = twos_comp(int(eph_raw.sf3.word9.bin, 2), 24) * (2 ** -43) * math.pi
+        self.idot = twos_comp(int(eph_raw.sf3.word10.bin[8:-2], 2), 14) * (2 ** -43) * math.pi
 
     def special_print(self) -> None:
         attr_list = [attr for attr in dir(self) if not attr.startswith('__') and not attr.startswith('special')]
