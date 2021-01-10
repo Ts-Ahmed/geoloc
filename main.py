@@ -1,13 +1,10 @@
 from time import sleep
 from pyubx2 import UBXMessage, POLL
+
+from config import PORT, TIMEOUT, BAUDRATE
 from ubxstreamer import UBXStreamer
 
 if __name__ == "__main__":
-
-    # set PORT, BAUDRATE and TIMEOUT as appropriate
-    PORT = 'COM5'
-    BAUDRATE = 9600
-    TIMEOUT = 0
 
     print("Instantiating UBXStreamer class...")
     ubxs = UBXStreamer(PORT, BAUDRATE, TIMEOUT)
@@ -20,7 +17,6 @@ if __name__ == "__main__":
     msg1 = UBXMessage('NAV', 'NAV-TIMEGPS', POLL)
     # msg2 = UBXMessage('AID', 'AID-EPH', POLL)
     msg2 = UBXMessage('RXM', 'RXM-RAW', POLL)
-    # msg2 = UBXMessage('NAV', 'NAV-SVINFO', POLL)
     # msg2 = UBXMessage('AID', 'AID-ALM', POLL)
     ubxs.send(msg1.serialize(), msg2.serialize())
 

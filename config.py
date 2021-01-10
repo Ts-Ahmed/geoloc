@@ -1,5 +1,9 @@
 MU = 3.986005 * (10 ** 14)
 OMEGA_E_DOT = 7.292115 * (10 ** -5)
+# set PORT, BAUDRATE and TIMEOUT as appropriate
+PORT = 'COM5'
+BAUDRATE = 9600
+TIMEOUT = 0
 
 
 def twos_comp(val, bits):
