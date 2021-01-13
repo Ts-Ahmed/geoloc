@@ -1,7 +1,8 @@
 MU = 3.986005 * (10 ** 14)
 OMEGA_E_DOT = 7.292115 * (10 ** -5)
+C = 299792458
 # set PORT, BAUDRATE and TIMEOUT as appropriate
-PORT = 'COM11'
+PORT = 'COM5'
 BAUDRATE = 9600
 TIMEOUT = 0
 

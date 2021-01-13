@@ -10,7 +10,7 @@ import pyubx2.exceptions as ube
 from almanac import Almanac_Raw, Almanac_Parsed
 from ephemeris import Ephemeris_Raw, Ephemeris_Parsed
 from gpssystime import GpsSysTime
-from position import get_wgs84_position, xyz_to_latlongalt
+from position import get_wgs84_sat_position, xyz_to_latlongalt
 
 
 class UBXStreamer:
@@ -127,13 +127,11 @@ class UBXStreamer:
                         print(parsed_data)
                     if parsed_data:
                         if hasattr(parsed_data, "iTOW") and hasattr(parsed_data, "fTOW"):
-                            print(parsed_data)
                             self.gps_sys_time.set_data(raw_data)
                             print("GPS System time: ", self.gps_sys_time.time)
                             print("\n")
 
                         if hasattr(parsed_data, "dwrd_01"):
-                            print(parsed_data)
                             self.almanac_raw[parsed_data.svid - 1].set_data(raw_data)  # Fills up the ephemeris class
                             if not self.almanac_raw[parsed_data.svid - 1].sf_empty:
                                 self.almanac_parsed[parsed_data.svid - 1] = \
@@ -142,7 +140,6 @@ class UBXStreamer:
                                 print("\n")
 
                         if hasattr(parsed_data, "how") and parsed_data.how != 0:
-                            print(parsed_data)
                             print('svid: ', parsed_data.svid)
                             self.ephemeris_raw[parsed_data.svid - 1].set_data(raw_data)  # Fills up the ephemeris class
 
@@ -153,8 +150,8 @@ class UBXStreamer:
 
                         if hasattr(parsed_data, "how") and parsed_data.how != 0 and \
                                 self.ephemeris_parsed[parsed_data.svid - 1] is not None:
-                            X, Y, Z = get_wgs84_position(self.ephemeris_parsed[parsed_data.svid - 1],
-                                                         self.gps_sys_time)
+                            X, Y, Z = get_wgs84_sat_position(self.ephemeris_parsed[parsed_data.svid - 1],
+                                                             self.gps_sys_time)
                             print("XYZ: ", (X, Y, Z))
                             Lat, Long, Alt = xyz_to_latlongalt(X, Y, Z)
                             print("LatLongAlt: ", (Lat, Long, Alt))

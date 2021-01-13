@@ -5,7 +5,7 @@ from ephemeris import Ephemeris_Parsed
 from gpssystime import GpsSysTime
 
 
-def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
+def get_wgs84_sat_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     af0 = eph.af0
     af1 = eph.af1
     af2 = eph.af2
@@ -29,9 +29,9 @@ def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
 
     t_sv = gps.time
 
-    # On met les effets relativistes à 0 car on n'a pas encore calculé Ek
+    # Initializing this value at 0 because Ek hasn't been calculated yet
     delta_tr = 0
-    # Correction globale (dérive + effet rel)
+    # Code phase offset
     delta_t_sv = af0 + af1 * (t_sv - toc) + af2 * (t_sv - toc) ** 2 + delta_tr
     t = t_sv - delta_t_sv
     # t = t - tpdist
@@ -49,7 +49,7 @@ def get_wgs84_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     Mk = m0 + N * Tk
 
     Ek = kepler_solve(Mk, ecc)
-    # Offset de Correction relativiste
+    # Relativistic correction term
     delta_tr = (-4.442807633**-10) * ecc * sqrt(a) * sin(Ek)
 
     # Recalcul de Tk
@@ -112,10 +112,10 @@ def xyz_to_latlongalt(X, Y, Z):
     ec = 0.00669437999014
     eprimec = 0.00673949674228
 
-    # Calcul de la Longitude
+    # Longitude
     lamb_da = arctan2(Y, X)
 
-    # Calcul de la Latitude
+    # Latitude
     p = sqrt(X ** 2 + Y ** 2)
     tanu = (Z / p) * (a / b)
     fin_boucle = 0
@@ -131,7 +131,7 @@ def xyz_to_latlongalt(X, Y, Z):
 
     phi = atan(a / b * tanu)
 
-    # Calcul de l'Altitude
+    # Altitude
     N = a / sqrt(1 - ec * sin(phi) ** 2)
     h = p / cos(phi) - N
 
