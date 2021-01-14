@@ -1,11 +1,19 @@
 from math import sqrt, atan, sin, cos, pi
 
-from config import MU, OMEGA_E_DOT
+from config import MU, OMEGA_E_DOT, C, REF_X, REF_Y, REF_Z
 from ephemeris import Ephemeris_Parsed
-from gpssystime import GpsSysTime
+
+import numpy as np
 
 
-def get_wgs84_sat_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
+class XYZPosition:
+    def __init__(self, X, Y, Z):
+        self.X = X
+        self.Y = Y
+        self.Z = Z
+
+
+def get_wgs84_sat_position(eph: Ephemeris_Parsed, time):
     af0 = eph.af0
     af1 = eph.af1
     af2 = eph.af2
@@ -27,7 +35,7 @@ def get_wgs84_sat_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     toe = eph.toe
     toc = eph.toc
 
-    t_sv = gps.time
+    t_sv = time
 
     # Initializing this value at 0 because Ek hasn't been calculated yet
     delta_tr = 0
@@ -50,7 +58,7 @@ def get_wgs84_sat_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
 
     Ek = kepler_solve(Mk, ecc)
     # Relativistic correction term
-    delta_tr = (-4.442807633**-10) * ecc * sqrt(a) * sin(Ek)
+    delta_tr = (-4.442807633 ** -10) * ecc * sqrt(a) * sin(Ek)
 
     # Recalcul de Tk
     delta_t_sv = af0 + af1 * (t_sv - toc) + af2 * ((t_sv - toc) ** 2) + delta_tr
@@ -63,7 +71,7 @@ def get_wgs84_sat_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     elif Tk < -302400:
         Tk += 604800
 
-    sinVk = (sin(Ek) * sqrt(1 - ecc**2)) / (1 - ecc * cos(Ek))
+    sinVk = (sin(Ek) * sqrt(1 - ecc ** 2)) / (1 - ecc * cos(Ek))
 
     cosVk = (cos(Ek) - ecc) / (1 - ecc * cos(Ek))
 
@@ -74,10 +82,10 @@ def get_wgs84_sat_position(eph: Ephemeris_Parsed, gps: GpsSysTime):
     delta_ik = cic * cos(2 * phik) + cis * sin(2 * phik)
 
     Uk = phik + delta_uk
-    Rk = a*(1-ecc*cos(Ek)) + delta_rk
-    Ik = i0 + idot*Tk + delta_ik
+    Rk = a * (1 - ecc * cos(Ek)) + delta_rk
+    Ik = i0 + idot * Tk + delta_ik
 
-    OmegaK = omega0 + (omegadot - OMEGA_E_DOT)*Tk - OMEGA_E_DOT*toe
+    OmegaK = omega0 + (omegadot - OMEGA_E_DOT) * Tk - OMEGA_E_DOT * toe
 
     Xk = Rk * cos(Uk)
     Yk = Rk * sin(Uk)
@@ -105,8 +113,11 @@ def arctan2(sinus, cosinus):
         return (-1 * pi) - atan(sinus / (-1 * cosinus))
 
 
-def xyz_to_latlongalt(X, Y, Z):
+def get_delta_tr():
+    pass
 
+
+def xyz_to_latlongalt(X, Y, Z):
     a = 6378137
     b = 6356752.3142
     ec = 0.00669437999014
@@ -139,3 +150,42 @@ def xyz_to_latlongalt(X, Y, Z):
     Long = 180 / pi * lamb_da
     Alt = h
     return Lat, Long, Alt
+
+
+def get_receiver_position(eph, pseudorange, satPosition, clockBias, rTime):
+    def update_h_matrix(Hrow, sat_position: XYZPosition, receiver_position: XYZPosition):
+        distance = sqrt((sat_position.X - receiver_position.X) ** 2 +
+                        (sat_position.Y - receiver_position.Y) ** 2 +
+                        (sat_position.Z - receiver_position.Z) ** 2)
+        Hrow[0] = (sat_position.X - receiver_position.X) / distance
+        Hrow[1] = (sat_position.Y - receiver_position.Y) / distance
+        Hrow[2] = (sat_position.Z - receiver_position.Z) / distance
+
+    pr_sv_available = list(k for k, v in pseudorange.items() if v is not None)
+    eph_sv_available = list(k for k, v in eph.items() if v is not None)
+    sv_list = list(set(pr_sv_available).intersection(eph_sv_available))
+
+    pr_measured = [pseudorange[x] for x in sv_list]
+    pr_over_c = [x / C for x in pr_measured]
+    approx_sv_clock_error = [eph[x].af0 + eph[x].af1 * (rTime - eph[x].toc) + eph[x].af2 * (rTime - eph[x].toc) ** 2
+                             for x in sv_list]
+    transmit_time = [rTime - x - y for x, y in zip(pr_over_c, approx_sv_clock_error)]
+
+    sv_ecef_x = [satPosition[x].X for x in sv_list]
+    sv_ecef_y = [satPosition[x].Y for x in sv_list]
+    sv_ecef_z = [satPosition[x].Z for x in sv_list]
+    get_delta_tr()
+
+    pr_measured_corrected = [x +
+                             C*(eph[y].af0 + eph[y].af1 * (rTime - eph[y].toc) + eph[y].af2 * (rTime - eph[y].toc) ** 2)
+                             for x, y in zip(pr_measured, sv_list)]
+
+    ref_receiver_position = XYZPosition(REF_X, REF_Y, REF_Z)
+    H = -np.ones((len(sv_list), 4))
+    for i in range(len(sv_list)):
+        update_h_matrix(H[i], satPosition[sv_list[i]], ref_receiver_position)
+
+    pr_calculated = [sqrt((satPosition[sv_id].X - ref_receiver_position.X) ** 2
+                          + (satPosition[sv_id].Y - ref_receiver_position.Y) ** 2
+                          + (satPosition[sv_id].Z - ref_receiver_position.Z) ** 2)
+                     + clockBias for sv_id in sv_list]
