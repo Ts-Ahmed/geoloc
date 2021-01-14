@@ -10,7 +10,7 @@ import pyubx2.exceptions as ube
 from almanac import Almanac_Raw, Almanac_Parsed
 from ephemeris import Ephemeris_Raw, Ephemeris_Parsed
 from gpssystime import GpsSysTime
-from position import get_wgs84_sat_position, xyz_to_latlongalt
+from position import get_wgs84_sat_position, xyz_to_latlongalt, SatPosition
 
 
 class UBXStreamer:
@@ -36,6 +36,7 @@ class UBXStreamer:
         self.ephemeris_raw = {i: Ephemeris_Raw() for i in range(32)}
         self.ephemeris_parsed = {i: None for i in range(32)}
         self.pseudorange = {i: None for i in range(32)}
+        self.sat_position = {i: None for i in range(32)}
         self.clockBias = 0
         self.receiver_time = 0
         self.gps_sys_time = GpsSysTime()
@@ -93,14 +94,15 @@ class UBXStreamer:
             self._reading = False
             self._serial_thread.join()
 
-    def send(self, data1, data2):
+    def send(self, data1, data2, data3=None):
         """
         Send data to serial connection.
         """
 
-        for data in (data1, data2):
-            self._serial_object.write(data)
-            sleep(1)
+        for data in (data1, data2, data3):
+            if data is not None:
+                self._serial_object.write(data)
+                sleep(1)
 
     def flush(self):
         """
@@ -157,6 +159,7 @@ class UBXStreamer:
                                 self.ephemeris_parsed[parsed_data.svid - 1] is not None:
                             X, Y, Z = get_wgs84_sat_position(self.ephemeris_parsed[parsed_data.svid - 1],
                                                              self.receiver_time)
+                            self.sat_position[parsed_data.svid - 1] = SatPosition(X, Y, Z)
                             print("XYZ: ", (X, Y, Z))
                             Lat, Long, Alt = xyz_to_latlongalt(X, Y, Z)
                             print("LatLongAlt: ", (Lat, Long, Alt))
@@ -167,7 +170,7 @@ class UBXStreamer:
                             numSV = parsed_data.numSV
                             if numSV != 0:
                                 for i in range(1, numSV + 1):
-                                    cpMes_num = "cpMes_0" + str(i) if i < 10 else "cpMes_" + str(i)
+                                    cpMes_num = "prMes_0" + str(i) if i < 10 else "cpMes_" + str(i)
                                     sv_num = "sv_0" + str(i) if i < 10 else "sv_" + str(i)
                                     self.pseudorange[int(getattr(parsed_data, sv_num)) - 1] = \
                                         getattr(parsed_data, cpMes_num)
