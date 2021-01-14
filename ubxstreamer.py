@@ -8,9 +8,10 @@ from serial import Serial, SerialException, SerialTimeoutException
 import pyubx2.exceptions as ube
 
 from almanac import Almanac_Raw, Almanac_Parsed
+from config import C
 from ephemeris import Ephemeris_Raw, Ephemeris_Parsed
 from gpssystime import GpsSysTime
-from position import get_wgs84_sat_position, xyz_to_latlongalt, SatPosition
+from position import get_wgs84_sat_position, xyz_to_latlongalt, XYZPosition
 
 
 class UBXStreamer:
@@ -132,7 +133,7 @@ class UBXStreamer:
                         print(parsed_data)
                     if parsed_data:
                         if parsed_data.identity == "NAV-CLOCK":
-                            self.clockBias = parsed_data.clkB * (10 ** -9)
+                            self.clockBias = parsed_data.clkB * (10 ** -9) * C
                             self.receiver_time = parsed_data.iTOW * (10 ** -3)
                             print("Receiver clock bias: ", self.clockBias)
                             print("GPS System Time: ", self.receiver_time)
@@ -159,7 +160,7 @@ class UBXStreamer:
                                 self.ephemeris_parsed[parsed_data.svid - 1] is not None:
                             X, Y, Z = get_wgs84_sat_position(self.ephemeris_parsed[parsed_data.svid - 1],
                                                              self.receiver_time)
-                            self.sat_position[parsed_data.svid - 1] = SatPosition(X, Y, Z)
+                            self.sat_position[parsed_data.svid - 1] = XYZPosition(X, Y, Z)
                             print("XYZ: ", (X, Y, Z))
                             Lat, Long, Alt = xyz_to_latlongalt(X, Y, Z)
                             print("LatLongAlt: ", (Lat, Long, Alt))
