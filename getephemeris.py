@@ -14,7 +14,7 @@ if __name__ == "__main__":
     ubxs.start_read_thread()
 
     print("\nPolling receiver...\n\n")
-    msg1 = UBXMessage('NAV', 'NAV-TIMEGPS', POLL)
+    msg1 = UBXMessage('NAV', 'NAV-CLOCK', POLL)
     msg2 = UBXMessage('AID', 'AID-EPH', POLL)
     ubxs.send(msg1.serialize(), msg2.serialize())
 
