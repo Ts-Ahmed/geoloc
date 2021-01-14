@@ -152,18 +152,25 @@ def xyz_to_latlongalt(X, Y, Z):
     return Lat, Long, Alt
 
 
-def get_receiver_position(eph, pseudorange, satPosition, clockBias, rTime):
-    def update_h_matrix(Hrow, sat_position: XYZPosition, receiver_position: XYZPosition):
-        distance = sqrt((sat_position.X - receiver_position.X) ** 2 +
-                        (sat_position.Y - receiver_position.Y) ** 2 +
-                        (sat_position.Z - receiver_position.Z) ** 2)
-        Hrow[0] = (sat_position.X - receiver_position.X) / distance
-        Hrow[1] = (sat_position.Y - receiver_position.Y) / distance
-        Hrow[2] = (sat_position.Z - receiver_position.Z) / distance
+def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias, rTime):
+    def update_h_matrix(Hrow, sat_position: XYZPosition, receiver_position):
+        distance = sqrt((sat_position.X - receiver_position[0]) ** 2 +
+                        (sat_position.Y - receiver_position[1]) ** 2 +
+                        (sat_position.Z - receiver_position[2]) ** 2)
+        Hrow[0] = (sat_position.X - receiver_position[0]) / distance
+        Hrow[1] = (sat_position.Y - receiver_position[1]) / distance
+        Hrow[2] = (sat_position.Z - receiver_position[2]) / distance
 
     pr_sv_available = list(k for k, v in pseudorange.items() if v is not None)
     eph_sv_available = list(k for k, v in eph.items() if v is not None)
-    sv_list = list(set(pr_sv_available).intersection(eph_sv_available))
+    lli = list(k for k, v in lli.items() if v is not None and v > 0)
+
+    sv_list = set(pr_sv_available).intersection(eph_sv_available)
+    sv_list = list(sv_list.intersection(lli))
+    print(sv_list)
+    if len(sv_list) < 4:
+        print("Not enough satellite with strong signal")
+        return
 
     pr_measured = [pseudorange[x] for x in sv_list]
     pr_over_c = [x / C for x in pr_measured]
@@ -180,12 +187,25 @@ def get_receiver_position(eph, pseudorange, satPosition, clockBias, rTime):
                              C*(eph[y].af0 + eph[y].af1 * (rTime - eph[y].toc) + eph[y].af2 * (rTime - eph[y].toc) ** 2)
                              for x, y in zip(pr_measured, sv_list)]
 
-    ref_receiver_position = XYZPosition(REF_X, REF_Y, REF_Z)
-    H = -np.ones((len(sv_list), 4))
-    for i in range(len(sv_list)):
-        update_h_matrix(H[i], satPosition[sv_list[i]], ref_receiver_position)
+    last_receiver_position = np.array([REF_X, REF_Y, REF_Z, clockBias])
 
-    pr_calculated = [sqrt((satPosition[sv_id].X - ref_receiver_position.X) ** 2
-                          + (satPosition[sv_id].Y - ref_receiver_position.Y) ** 2
-                          + (satPosition[sv_id].Z - ref_receiver_position.Z) ** 2)
-                     + clockBias for sv_id in sv_list]
+    H = -np.ones((len(sv_list), 4))
+    delta_x = np.array([42])
+    while np.linalg.norm(delta_x[:3]) > 10**-6:
+        for i in range(len(sv_list)):
+            update_h_matrix(H[i], satPosition[sv_list[i]], last_receiver_position)
+
+        pr_calculated = [sqrt((satPosition[sv_id].X - last_receiver_position[0]) ** 2
+                              + (satPosition[sv_id].Y - last_receiver_position[1]) ** 2
+                              + (satPosition[sv_id].Z - last_receiver_position[2]) ** 2)
+                         + clockBias for sv_id in sv_list]
+        delta_rho = np.array([x - y for x,y in zip(pr_calculated, pr_measured_corrected)])
+
+        delta_x = np.dot(np.dot(np.linalg.inv(np.dot(H.transpose(), H)), H.transpose()), delta_rho)
+        last_receiver_position = last_receiver_position + delta_x
+        Lat, Long, Alt = \
+            xyz_to_latlongalt(last_receiver_position[0], last_receiver_position[1], last_receiver_position[2])
+        print("Longitude: ", Long)
+        print("Latitude: ", Lat)
+        print("Altitude: ", Alt)
+        print("\n")

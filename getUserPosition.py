@@ -19,9 +19,9 @@ if __name__ == "__main__":
     msg2 = UBXMessage('RXM', 'RXM-RAW', POLL)
     msg3 = UBXMessage('AID', 'AID-EPH', POLL)
     ubxs.send(msg1.serialize(), msg2.serialize(), msg3.serialize())
-
+    sleep(1)
     get_receiver_position(ubxs.ephemeris_parsed, ubxs.pseudorange,
-                          ubxs.sat_position, ubxs.clockBias, ubxs.receiver_time)
+                          ubxs.sat_position, ubxs.lli, ubxs.clockBias, ubxs.receiver_time)
 
     sleep(3)
 

@@ -37,6 +37,7 @@ class UBXStreamer:
         self.ephemeris_raw = {i: Ephemeris_Raw() for i in range(32)}
         self.ephemeris_parsed = {i: None for i in range(32)}
         self.pseudorange = {i: None for i in range(32)}
+        self.lli = {i: None for i in range(32)}
         self.sat_position = {i: None for i in range(32)}
         self.clockBias = 0
         self.receiver_time = 0
@@ -173,8 +174,10 @@ class UBXStreamer:
                                 for i in range(1, numSV + 1):
                                     cpMes_num = "prMes_0" + str(i) if i < 10 else "cpMes_" + str(i)
                                     sv_num = "sv_0" + str(i) if i < 10 else "sv_" + str(i)
+                                    lli_num = "lli_0" + str(i) if i < 10 else "lli_" + str(i)
                                     self.pseudorange[int(getattr(parsed_data, sv_num)) - 1] = \
                                         getattr(parsed_data, cpMes_num)
+                                    self.lli[int(getattr(parsed_data, sv_num)) - 1] = getattr(parsed_data, lli_num)
 
                 except (ube.UBXStreamError, ube.UBXMessageError, ube.UBXTypeError,
                         ube.UBXParseError) as err:
