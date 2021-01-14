@@ -1,6 +1,11 @@
 MU = 3.986005 * (10 ** 14)
 OMEGA_E_DOT = 7.292115 * (10 ** -5)
 C = 299792458
+# Reference point (in meters) = Eiffel Tower location in ECEF
+REF_X = 4201008
+REF_Y = 168327
+REF_Z = 4780211
+
 # set PORT, BAUDRATE and TIMEOUT as appropriate
 PORT = 'COM5'
 BAUDRATE = 9600
