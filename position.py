@@ -36,7 +36,7 @@ def get_wgs84_sat_position(eph: Ephemeris_Parsed, time: int, pseudorange: int):
     toc = eph.toc
 
     """Correcting GPS time for transit time (range/speed of light) if range value was indeed received"""
-    t_sv = time - pseudorange/C if pseudorange is not None else time
+    t_sv = time - pseudorange / C if pseudorange is not None else time
 
     # Initializing this value at 0 because Ek hasn't been calculated yet
     delta_tr = 0
@@ -111,8 +111,41 @@ def arctan2(sinus, cosinus):
         return (-1 * pi) - atan(sinus / (-1 * cosinus))
 
 
-def get_delta_tr():
-    pass
+def get_delta_tr(ephemeris: Ephemeris_Parsed, pseudorange, receiver_time):
+    af0 = ephemeris.af0
+    af1 = ephemeris.af1
+    af2 = ephemeris.af2
+    m0 = ephemeris.m0
+    delta_n = ephemeris.delta_n
+    a = ephemeris.sqrt_a ** 2
+    ecc = ephemeris.e
+    toe = ephemeris.toe
+    toc = ephemeris.toc
+
+    t_sv = receiver_time - pseudorange / C
+
+    # Initializing this value at 0 because Ek hasn't been calculated yet
+    delta_tr = 0
+    # Code phase offset
+    delta_t_sv = af0 + af1 * (t_sv - toc) + af2 * (t_sv - toc) ** 2 + delta_tr
+    t = t_sv - delta_t_sv
+    Tk = t - toe
+    if Tk > 302400:
+        Tk -= 604800
+    elif Tk < -302400:
+        Tk += 604800
+
+    n0 = sqrt(MU / (a ** 3))
+
+    N = n0 + delta_n
+
+    Mk = m0 + N * Tk
+
+    Ek = kepler_solve(Mk, ecc)
+
+    # Relativistic correction term
+    delta_tr = F * ecc * sqrt(a) * sin(Ek)
+    return delta_tr
 
 
 def xyz_to_latlongalt(X, Y, Z):
@@ -150,7 +183,7 @@ def xyz_to_latlongalt(X, Y, Z):
     return Lat, Long, Alt
 
 
-def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias_dist, rTime):
+def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias_dist, receiver_time):
     def update_h_matrix(Hrow, sat_position: XYZPosition, receiver_position):
         distance = sqrt((sat_position.X - receiver_position[0]) ** 2 +
                         (sat_position.Y - receiver_position[1]) ** 2 +
@@ -171,26 +204,19 @@ def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias_dist, rT
         return
 
     pr_measured = [pseudorange[x] for x in sv_list]
-    pr_over_c = [x / C for x in pr_measured]
-    approx_sv_clock_error = [eph[x].af0 + eph[x].af1 * (rTime - eph[x].toc) + eph[x].af2 * (rTime - eph[x].toc) ** 2
-                             for x in sv_list]
-    transmit_time = [rTime - x - y for x, y in zip(pr_over_c, approx_sv_clock_error)]
-
-    sv_ecef_x = [satPosition[x].X for x in sv_list]
-    sv_ecef_y = [satPosition[x].Y for x in sv_list]
-    sv_ecef_z = [satPosition[x].Z for x in sv_list]
-    get_delta_tr()
 
     pr_measured_corrected = \
-        [x + C*(eph[y].af0 + eph[y].af1 * (rTime - eph[y].toc) + eph[y].af2 * (rTime - eph[y].toc) ** 2)
+        [x + C * (eph[y].af0 + eph[y].af1 * (receiver_time - x / C - eph[y].toc) +
+                  eph[y].af2 * ((receiver_time - x / C - eph[y].toc) ** 2) +
+                  get_delta_tr(eph[y], x, receiver_time) - eph[y].tgd)
          for x, y in zip(pr_measured, sv_list)]
 
     last_receiver_position = np.array([REF_X, REF_Y, REF_Z, clockBias_dist])
 
     H = -np.ones((len(sv_list), 4))
-    delta_x = np.array([42])
+    delta_x = np.array([42])  # Arbitrary number to enter the loop
     loops = 10
-    while np.linalg.norm(delta_x[:3]) > 10**-6 and loops > 0:
+    while np.linalg.norm(delta_x[:3]) > 10 ** -6 and loops > 0:
         for i in range(len(sv_list)):
             update_h_matrix(H[i], satPosition[sv_list[i]], last_receiver_position)
 
@@ -198,7 +224,7 @@ def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias_dist, rT
                               + (satPosition[sv_id].Y - last_receiver_position[1]) ** 2
                               + (satPosition[sv_id].Z - last_receiver_position[2]) ** 2)
                          + clockBias_dist for sv_id in sv_list]
-        delta_rho = np.array([x - y for x,y in zip(pr_calculated, pr_measured_corrected)])
+        delta_rho = np.array([x - y for x, y in zip(pr_calculated, pr_measured_corrected)])
         try:
             delta_x = np.dot(np.dot(np.linalg.inv(np.dot(H.transpose(), H)), H.transpose()), delta_rho)
         except np.linalg.LinAlgError:
