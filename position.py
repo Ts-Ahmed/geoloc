@@ -4,7 +4,6 @@ from config import MU, OMEGA_E_DOT, C, REF_X, REF_Y, REF_Z, F
 from ephemeris import Ephemeris_Parsed
 
 import numpy as np
-import heapq
 
 
 class XYZPosition:
@@ -193,6 +192,7 @@ def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, re
         Hrow[1] = (sat_position.Y - receiver_position[1]) / distance
         Hrow[2] = (sat_position.Z - receiver_position[2]) / distance
 
+    """Taking the 4 satellites with the biggest SNR, from list of available satellites"""
     pr_sv_available = list(k for k, v in pseudorange.items() if v is not None)
     eph_sv_available = list(k for k, v in eph.items() if v is not None)
     sv_list = list(set(pr_sv_available).intersection(eph_sv_available))
@@ -239,5 +239,4 @@ def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, re
         print("Longitude: ", Long)
         print("Latitude: ", Lat)
         print("Altitude: ", Alt)
-        print("Norm: ", np.linalg.norm(delta_x))
         print("\n")
