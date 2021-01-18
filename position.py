@@ -4,6 +4,7 @@ from config import MU, OMEGA_E_DOT, C, REF_X, REF_Y, REF_Z, F
 from ephemeris import Ephemeris_Parsed
 
 import numpy as np
+import heapq
 
 
 class XYZPosition:
@@ -183,7 +184,7 @@ def xyz_to_latlongalt(X, Y, Z):
     return Lat, Long, Alt
 
 
-def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias_dist, receiver_time):
+def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, receiver_time):
     def update_h_matrix(Hrow, sat_position: XYZPosition, receiver_position):
         distance = sqrt((sat_position.X - receiver_position[0]) ** 2 +
                         (sat_position.Y - receiver_position[1]) ** 2 +
@@ -194,11 +195,11 @@ def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias_dist, re
 
     pr_sv_available = list(k for k, v in pseudorange.items() if v is not None)
     eph_sv_available = list(k for k, v in eph.items() if v is not None)
-    lli = list(k for k, v in lli.items() if v is not None and v > 0)
-
-    sv_list = set(pr_sv_available).intersection(eph_sv_available)
-    sv_list = list(sv_list.intersection(lli))
+    sv_list = list(set(pr_sv_available).intersection(eph_sv_available))
+    snr_list = [snr[x] for x in sv_list]
+    sv_list = [sv_list[x] for x in np.argpartition(snr_list, -4)[-4:].tolist()]
     print(sv_list)
+
     if len(sv_list) < 4:
         print("Not enough satellite with strong signal")
         return
@@ -211,6 +212,7 @@ def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias_dist, re
                   get_delta_tr(eph[y], x, receiver_time) - eph[y].tgd)
          for x, y in zip(pr_measured, sv_list)]
 
+    """Initial position taken from reference point"""
     last_receiver_position = np.array([REF_X, REF_Y, REF_Z, clockBias_dist])
 
     H = -np.ones((len(sv_list), 4))
@@ -237,4 +239,5 @@ def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias_dist, re
         print("Longitude: ", Long)
         print("Latitude: ", Lat)
         print("Altitude: ", Alt)
+        print("Norm: ", np.linalg.norm(delta_x))
         print("\n")
