@@ -1,6 +1,10 @@
+"""
+This configuration file defines a set of variables and methods to be used throughout the application.
+"""
 MU = 3.986005 * (10 ** 14)
 OMEGA_E_DOT = 7.292115 * (10 ** -5)
 C = 299792458
+F = -4.442807633 * (10**-10)
 # Reference point (in meters) = Eiffel Tower location in ECEF
 REF_X = 4201008
 REF_Y = 168327

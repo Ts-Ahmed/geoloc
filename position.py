@@ -1,6 +1,6 @@
 from math import sqrt, atan, sin, cos, pi
 
-from config import MU, OMEGA_E_DOT, C, REF_X, REF_Y, REF_Z
+from config import MU, OMEGA_E_DOT, C, REF_X, REF_Y, REF_Z, F
 from ephemeris import Ephemeris_Parsed
 
 import numpy as np
@@ -13,7 +13,7 @@ class XYZPosition:
         self.Z = Z
 
 
-def get_wgs84_sat_position(eph: Ephemeris_Parsed, time):
+def get_wgs84_sat_position(eph: Ephemeris_Parsed, time: int, pseudorange: int):
     af0 = eph.af0
     af1 = eph.af1
     af2 = eph.af2
@@ -35,16 +35,15 @@ def get_wgs84_sat_position(eph: Ephemeris_Parsed, time):
     toe = eph.toe
     toc = eph.toc
 
-    t_sv = time
+    """Correcting GPS time for transit time (range/speed of light) if range value was indeed received"""
+    t_sv = time - pseudorange/C if pseudorange is not None else time
 
     # Initializing this value at 0 because Ek hasn't been calculated yet
     delta_tr = 0
     # Code phase offset
     delta_t_sv = af0 + af1 * (t_sv - toc) + af2 * (t_sv - toc) ** 2 + delta_tr
     t = t_sv - delta_t_sv
-    # t = t - tpdist
     Tk = t - toe
-    # Tk = gps.time - toe
     if Tk > 302400:
         Tk -= 604800
     elif Tk < -302400:
@@ -57,15 +56,14 @@ def get_wgs84_sat_position(eph: Ephemeris_Parsed, time):
     Mk = m0 + N * Tk
 
     Ek = kepler_solve(Mk, ecc)
+
     # Relativistic correction term
-    delta_tr = (-4.442807633 ** -10) * ecc * sqrt(a) * sin(Ek)
+    delta_tr = F * ecc * sqrt(a) * sin(Ek)
 
     # Recalcul de Tk
     delta_t_sv = af0 + af1 * (t_sv - toc) + af2 * ((t_sv - toc) ** 2) + delta_tr
     t = t_sv - delta_t_sv
-    # t = t - tpdist
     Tk = t - toe
-    # Tk = gps.time - toe
     if Tk > 302400:
         Tk -= 604800
     elif Tk < -302400:
@@ -152,7 +150,7 @@ def xyz_to_latlongalt(X, Y, Z):
     return Lat, Long, Alt
 
 
-def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias, rTime):
+def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias_dist, rTime):
     def update_h_matrix(Hrow, sat_position: XYZPosition, receiver_position):
         distance = sqrt((sat_position.X - receiver_position[0]) ** 2 +
                         (sat_position.Y - receiver_position[1]) ** 2 +
@@ -183,11 +181,11 @@ def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias, rTime):
     sv_ecef_z = [satPosition[x].Z for x in sv_list]
     get_delta_tr()
 
-    pr_measured_corrected = [x +
-                             C*(eph[y].af0 + eph[y].af1 * (rTime - eph[y].toc) + eph[y].af2 * (rTime - eph[y].toc) ** 2)
-                             for x, y in zip(pr_measured, sv_list)]
+    pr_measured_corrected = \
+        [x + C*(eph[y].af0 + eph[y].af1 * (rTime - eph[y].toc) + eph[y].af2 * (rTime - eph[y].toc) ** 2)
+         for x, y in zip(pr_measured, sv_list)]
 
-    last_receiver_position = np.array([REF_X, REF_Y, REF_Z, clockBias])
+    last_receiver_position = np.array([REF_X, REF_Y, REF_Z, clockBias_dist])
 
     H = -np.ones((len(sv_list), 4))
     delta_x = np.array([42])
@@ -198,10 +196,13 @@ def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias, rTime):
         pr_calculated = [sqrt((satPosition[sv_id].X - last_receiver_position[0]) ** 2
                               + (satPosition[sv_id].Y - last_receiver_position[1]) ** 2
                               + (satPosition[sv_id].Z - last_receiver_position[2]) ** 2)
-                         + clockBias for sv_id in sv_list]
+                         + clockBias_dist for sv_id in sv_list]
         delta_rho = np.array([x - y for x,y in zip(pr_calculated, pr_measured_corrected)])
-
-        delta_x = np.dot(np.dot(np.linalg.inv(np.dot(H.transpose(), H)), H.transpose()), delta_rho)
+        try:
+            delta_x = np.dot(np.dot(np.linalg.inv(np.dot(H.transpose(), H)), H.transpose()), delta_rho)
+        except np.linalg.LinAlgError:
+            print("H matrix has no inverse!")
+            return
         last_receiver_position = last_receiver_position + delta_x
         Lat, Long, Alt = \
             xyz_to_latlongalt(last_receiver_position[0], last_receiver_position[1], last_receiver_position[2])

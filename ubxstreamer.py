@@ -39,7 +39,7 @@ class UBXStreamer:
         self.pseudorange = {i: None for i in range(32)}
         self.lli = {i: None for i in range(32)}
         self.sat_position = {i: None for i in range(32)}
-        self.clockBias = 0
+        self.clockBias_dist = 0
         self.receiver_time = 0
         self.gps_sys_time = GpsSysTime()
 
@@ -134,11 +134,23 @@ class UBXStreamer:
                         print(parsed_data)
                     if parsed_data:
                         if parsed_data.identity == "NAV-CLOCK":
-                            self.clockBias = parsed_data.clkB * (10 ** -9) * C
+                            self.clockBias_dist = parsed_data.clkB * (10 ** -9) * C
                             self.receiver_time = parsed_data.iTOW * (10 ** -3)
-                            print("Receiver clock bias: ", self.clockBias)
+                            print("Receiver clock bias: ", self.clockBias_dist)
                             print("GPS System Time: ", self.receiver_time)
                             print("\n")
+
+                        if parsed_data.identity == "RXM-RAW":
+                            self.receiver_time = parsed_data.iTOW * (10 ** -3)
+                            numSV = parsed_data.numSV
+                            if numSV != 0:
+                                for i in range(1, numSV + 1):
+                                    cpMes_num = "prMes_0" + str(i) if i < 10 else "cpMes_" + str(i)
+                                    sv_num = "sv_0" + str(i) if i < 10 else "sv_" + str(i)
+                                    lli_num = "lli_0" + str(i) if i < 10 else "lli_" + str(i)
+                                    self.pseudorange[int(getattr(parsed_data, sv_num)) - 1] = \
+                                        getattr(parsed_data, cpMes_num)
+                                    self.lli[int(getattr(parsed_data, sv_num)) - 1] = getattr(parsed_data, lli_num)
 
                         if parsed_data.identity == "AID-ALM":
                             self.almanac_raw[parsed_data.svid - 1].set_data(raw_data)  # Fills up the ephemeris class
@@ -159,25 +171,15 @@ class UBXStreamer:
 
                         if parsed_data.identity == "AID-EPH" and parsed_data.how != 0 and \
                                 self.ephemeris_parsed[parsed_data.svid - 1] is not None:
+                            """Adding 1 to receiver time here to compensate for delay between messages sent"""
                             X, Y, Z = get_wgs84_sat_position(self.ephemeris_parsed[parsed_data.svid - 1],
-                                                             self.receiver_time)
+                                                             self.receiver_time + 1,
+                                                             self.pseudorange[parsed_data.svid - 1])
                             self.sat_position[parsed_data.svid - 1] = XYZPosition(X, Y, Z)
                             print("XYZ: ", (X, Y, Z))
                             Lat, Long, Alt = xyz_to_latlongalt(X, Y, Z)
                             print("LatLongAlt: ", (Lat, Long, Alt))
                             print("\n")
-
-                        if parsed_data.identity == "RXM-RAW":
-                            self.receiver_time = parsed_data.iTOW * (10 ** -3)
-                            numSV = parsed_data.numSV
-                            if numSV != 0:
-                                for i in range(1, numSV + 1):
-                                    cpMes_num = "prMes_0" + str(i) if i < 10 else "cpMes_" + str(i)
-                                    sv_num = "sv_0" + str(i) if i < 10 else "sv_" + str(i)
-                                    lli_num = "lli_0" + str(i) if i < 10 else "lli_" + str(i)
-                                    self.pseudorange[int(getattr(parsed_data, sv_num)) - 1] = \
-                                        getattr(parsed_data, cpMes_num)
-                                    self.lli[int(getattr(parsed_data, sv_num)) - 1] = getattr(parsed_data, lli_num)
 
                 except (ube.UBXStreamError, ube.UBXMessageError, ube.UBXTypeError,
                         ube.UBXParseError) as err:
