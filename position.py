@@ -189,7 +189,8 @@ def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias_dist, rT
 
     H = -np.ones((len(sv_list), 4))
     delta_x = np.array([42])
-    while np.linalg.norm(delta_x[:3]) > 10**-6:
+    loops = 10
+    while np.linalg.norm(delta_x[:3]) > 10**-6 and loops > 0:
         for i in range(len(sv_list)):
             update_h_matrix(H[i], satPosition[sv_list[i]], last_receiver_position)
 
@@ -206,6 +207,7 @@ def get_receiver_position(eph, pseudorange, satPosition, lli, clockBias_dist, rT
         last_receiver_position = last_receiver_position + delta_x
         Lat, Long, Alt = \
             xyz_to_latlongalt(last_receiver_position[0], last_receiver_position[1], last_receiver_position[2])
+        loops -= 1
         print("Longitude: ", Long)
         print("Latitude: ", Lat)
         print("Altitude: ", Alt)

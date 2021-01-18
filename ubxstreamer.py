@@ -171,9 +171,8 @@ class UBXStreamer:
 
                         if parsed_data.identity == "AID-EPH" and parsed_data.how != 0 and \
                                 self.ephemeris_parsed[parsed_data.svid - 1] is not None:
-                            """Adding 1 to receiver time here to compensate for delay between messages sent"""
                             X, Y, Z = get_wgs84_sat_position(self.ephemeris_parsed[parsed_data.svid - 1],
-                                                             self.receiver_time + 1,
+                                                             self.receiver_time,
                                                              self.pseudorange[parsed_data.svid - 1])
                             self.sat_position[parsed_data.svid - 1] = XYZPosition(X, Y, Z)
                             print("XYZ: ", (X, Y, Z))
