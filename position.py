@@ -205,7 +205,7 @@ def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, re
 
     if len(sv_list) < 4:
         print("Not enough satellite with strong signal")
-        return Lat, Long, Alt
+        return None, None, None
 
     pr_measured = [pseudorange[x] for x in sv_list]
 
@@ -234,7 +234,7 @@ def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, re
             delta_x = np.dot(np.dot(np.linalg.inv(np.dot(H.transpose(), H)), H.transpose()), delta_rho)
         except np.linalg.LinAlgError:
             print("H matrix has no inverse!")
-            return Lat, Long, Alt
+            return None, None, None
         last_receiver_position = last_receiver_position + delta_x
         Lat, Long, Alt = \
             xyz_to_latlongalt(last_receiver_position[0], last_receiver_position[1], last_receiver_position[2])
