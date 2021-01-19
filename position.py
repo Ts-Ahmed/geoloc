@@ -1,4 +1,5 @@
 from math import sqrt, atan, sin, cos, pi
+from typing import Union, Optional
 
 from config import MU, OMEGA_E_DOT, C, REF_X, REF_Y, REF_Z, F
 from ephemeris import Ephemeris_Parsed
@@ -183,7 +184,8 @@ def xyz_to_latlongalt(X, Y, Z):
     return Lat, Long, Alt
 
 
-def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, receiver_time):
+def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, receiver_time) -> \
+        Union[tuple[None, None, None], tuple[Optional[float], Optional[float], Optional[float]]]:
     def update_h_matrix(Hrow, sat_position: XYZPosition, receiver_position):
         distance = sqrt((sat_position.X - receiver_position[0]) ** 2 +
                         (sat_position.Y - receiver_position[1]) ** 2 +
@@ -192,6 +194,7 @@ def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, re
         Hrow[1] = (sat_position.Y - receiver_position[1]) / distance
         Hrow[2] = (sat_position.Z - receiver_position[2]) / distance
 
+    Lat, Long, Alt = None, None, None
     """Taking the 4 satellites with the biggest SNR, from list of available satellites"""
     pr_sv_available = list(k for k, v in pseudorange.items() if v is not None)
     eph_sv_available = list(k for k, v in eph.items() if v is not None)
@@ -202,7 +205,7 @@ def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, re
 
     if len(sv_list) < 4:
         print("Not enough satellite with strong signal")
-        return
+        return Lat, Long, Alt
 
     pr_measured = [pseudorange[x] for x in sv_list]
 
@@ -231,12 +234,13 @@ def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, re
             delta_x = np.dot(np.dot(np.linalg.inv(np.dot(H.transpose(), H)), H.transpose()), delta_rho)
         except np.linalg.LinAlgError:
             print("H matrix has no inverse!")
-            return
+            return Lat, Long, Alt
         last_receiver_position = last_receiver_position + delta_x
         Lat, Long, Alt = \
             xyz_to_latlongalt(last_receiver_position[0], last_receiver_position[1], last_receiver_position[2])
         loops -= 1
-        print("Longitude: ", Long)
         print("Latitude: ", Lat)
+        print("Longitude: ", Long)
         print("Altitude: ", Alt)
         print("\n")
+    return Lat, Long, Alt

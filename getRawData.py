@@ -1,4 +1,3 @@
-from time import sleep
 from pyubx2 import UBXMessage, POLL
 
 from config import PORT, TIMEOUT, BAUDRATE
@@ -14,13 +13,9 @@ if __name__ == "__main__":
     ubxs.start_read_thread()
 
     print("\nPolling receiver...\n\n")
-    msg1 = UBXMessage('NAV', 'NAV-TIMEGPS', POLL)
-    # msg2 = UBXMessage('AID', 'AID-EPH', POLL)
+    msg1 = UBXMessage('NAV', 'NAV-CLOCK', POLL)
     msg2 = UBXMessage('RXM', 'RXM-RAW', POLL)
-    # msg2 = UBXMessage('AID', 'AID-ALM', POLL)
     ubxs.send(msg1.serialize(), msg2.serialize())
-
-    sleep(3)
 
     print("\n\nStopping reader thread...")
     ubxs.stop_read_thread()

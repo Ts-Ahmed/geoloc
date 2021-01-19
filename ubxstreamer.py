@@ -10,7 +10,6 @@ import pyubx2.exceptions as ube
 from almanac import Almanac_Raw, Almanac_Parsed
 from config import C
 from ephemeris import Ephemeris_Raw, Ephemeris_Parsed
-from gpssystime import GpsSysTime
 from position import get_wgs84_sat_position, xyz_to_latlongalt, XYZPosition
 
 
@@ -41,7 +40,6 @@ class UBXStreamer:
         self.sat_position = {i: None for i in range(32)}
         self.clockBias_dist = 0
         self.receiver_time = 0
-        self.gps_sys_time = GpsSysTime()
 
     def __del__(self):
         """
