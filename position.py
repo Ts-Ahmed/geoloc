@@ -232,6 +232,9 @@ def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, re
         delta_rho = np.array([x - y for x, y in zip(pr_calculated, pr_measured_corrected)])
         try:
             delta_x = np.dot(np.dot(np.linalg.inv(np.dot(H.transpose(), H)), H.transpose()), delta_rho)
+
+            residuals = delta_rho - np.dot(H, delta_x)
+            print("Residuals: ", residuals)
         except np.linalg.LinAlgError:
             print("H matrix has no inverse!")
             return None, None, None
