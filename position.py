@@ -200,7 +200,7 @@ def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, re
     eph_sv_available = list(k for k, v in eph.items() if v is not None)
     sv_list = list(set(pr_sv_available).intersection(eph_sv_available))
     snr_list = [snr[x] for x in sv_list]
-    sv_list = [sv_list[x] for x in np.argpartition(snr_list, -4)[-4:].tolist()]
+    sv_list = [sv_list[x] for x in np.argpartition(snr_list, -5)[-5:].tolist()]
     print(sv_list)
 
     if len(sv_list) < 4:
