@@ -1,3 +1,10 @@
+"""
+This file deals with ephemeris data.
+'Ephemeris_Raw' is an object for raw ephemeris data. The 'set_data' method parses the raw UBX-AID-EPH message and
+extracts the relevant fields as per the UBX documentation.
+'Ephemeris_Parsed' is an object for ephemeris data extracted from the Ephemeris_Raw object as per the GPS documentation.
+The 'special_print' method prints all attributes and their values.
+"""
 import math
 
 from config import twos_comp

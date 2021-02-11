@@ -1,3 +1,6 @@
+"""
+This file aggregates all methods needed to compute the position of the satellite or the receiver.
+"""
 from math import sqrt, atan, sin, cos, pi
 from typing import Union, Optional
 
@@ -15,6 +18,10 @@ class XYZPosition:
 
 
 def get_wgs84_sat_position(eph: Ephemeris_Parsed, time: int, pseudorange: int):
+    """
+    This method computes the ECEF position of the satellite in the sky using ephemeris and pseudorange data.
+    The method used here is described in the official GPS documentation.
+    """
     af0 = eph.af0
     af1 = eph.af1
     af2 = eph.af2
@@ -39,7 +46,7 @@ def get_wgs84_sat_position(eph: Ephemeris_Parsed, time: int, pseudorange: int):
     """Correcting GPS time for transit time (range/speed of light) if range value was indeed received"""
     t_sv = time - pseudorange / C if pseudorange is not None else time
 
-    # Initializing this value at 0 because Ek hasn't been calculated yet
+    # Initializing this value at 0 because Ek hasn't been computed yet
     delta_tr = 0
     # Code phase offset
     delta_t_sv = af0 + af1 * (t_sv - toc) + af2 * (t_sv - toc) ** 2 + delta_tr
@@ -61,7 +68,7 @@ def get_wgs84_sat_position(eph: Ephemeris_Parsed, time: int, pseudorange: int):
     # Relativistic correction term
     delta_tr = F * ecc * sqrt(a) * sin(Ek)
 
-    # Recalcul de Tk
+    # Computing Tk again with the real value of delta_tr
     delta_t_sv = af0 + af1 * (t_sv - toc) + af2 * ((t_sv - toc) ** 2) + delta_tr
     t = t_sv - delta_t_sv
     Tk = t - toe
@@ -150,6 +157,9 @@ def get_delta_tr(ephemeris: Ephemeris_Parsed, pseudorange, receiver_time):
 
 
 def xyz_to_latlongalt(X, Y, Z):
+    """
+    This method transforms a position in the ECEF coordinate system to Latitude, Longitude and Altitude.
+    """
     a = 6378137
     b = 6356752.3142
     ec = 0.00669437999014
@@ -161,14 +171,14 @@ def xyz_to_latlongalt(X, Y, Z):
     # Latitude
     p = sqrt(X ** 2 + Y ** 2)
     tanu = (Z / p) * (a / b)
-    fin_boucle = 0
-    while fin_boucle == 0:
+    end_loop = False
+    while not end_loop:
         cosu = (1 / (1 + tanu ** 2)) ** 0.5
         sinu = (1 - cosu ** 2) ** 0.5
         tanPhi = (Z + eprimec * b * sinu ** 3) / (p - ec * a * cosu ** 3)
 
         if abs(tanu - (b / a) * tanPhi) < 0.0000000001:
-            fin_boucle = 1
+            end_loop = True
         else:
             tanu = (b / a) * tanPhi
 
@@ -186,6 +196,10 @@ def xyz_to_latlongalt(X, Y, Z):
 
 def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, receiver_time) -> \
         Union[tuple[None, None, None], tuple[Optional[float], Optional[float], Optional[float]]]:
+    """
+    This method computes the position of the receiver using ephemeris and pseudorange data with the least-squares
+    estimation method.
+    """
     def update_h_matrix(Hrow, sat_position: XYZPosition, receiver_position):
         distance = sqrt((sat_position.X - receiver_position[0]) ** 2 +
                         (sat_position.Y - receiver_position[1]) ** 2 +
@@ -195,7 +209,12 @@ def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, re
         Hrow[2] = (sat_position.Z - receiver_position[2]) / distance
 
     Lat, Long, Alt = None, None, None
-    """Taking the 4 satellites with the biggest SNR, from list of available satellites"""
+
+    """
+    Taking the 5 satellites with the biggest (=best) SNR, from list of available satellites.
+    This method to filter satellites might not be optimal. 
+    There could be better ways to select the satellites that will be considered.
+    """
     pr_sv_available = list(k for k, v in pseudorange.items() if v is not None)
     eph_sv_available = list(k for k, v in eph.items() if v is not None)
     sv_list = list(set(pr_sv_available).intersection(eph_sv_available))
@@ -230,6 +249,7 @@ def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, re
                               + (satPosition[sv_id].Z - last_receiver_position[2]) ** 2)
                          + clockBias_dist for sv_id in sv_list]
         delta_rho = np.array([x - y for x, y in zip(pr_calculated, pr_measured_corrected)])
+
         try:
             delta_x = np.dot(np.dot(np.linalg.inv(np.dot(H.transpose(), H)), H.transpose()), delta_rho)
 
@@ -238,6 +258,7 @@ def get_receiver_position(eph, pseudorange, satPosition, snr, clockBias_dist, re
         except np.linalg.LinAlgError:
             print("H matrix has no inverse!")
             return None, None, None
+
         last_receiver_position = last_receiver_position + delta_x
         Lat, Long, Alt = \
             xyz_to_latlongalt(last_receiver_position[0], last_receiver_position[1], last_receiver_position[2])

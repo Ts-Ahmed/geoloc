@@ -10,7 +10,7 @@ REF_X = 4201008
 REF_Y = 168327
 REF_Z = 4780211
 
-# set PORT, BAUDRATE and TIMEOUT as appropriate
+# set PORT, BAUDRATE and TIMEOUT as appropriate for your system
 PORT = 'COM5'
 BAUDRATE = 9600
 TIMEOUT = 0

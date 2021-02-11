@@ -1,3 +1,10 @@
+"""
+This file deals with almanac data.
+'Almanac_Raw' is an object for raw almanac data. The 'set_data' method parses the raw UBX-AID-ALM message and extracts
+the relevant fields as per the UBX documentation.
+'Almanac_Parsed' is an object for almanac data extracted from the Almanac_Raw object as per the GPS documentation. The
+'special_print' method prints all attributes and their values.
+"""
 import math
 
 from config import twos_comp

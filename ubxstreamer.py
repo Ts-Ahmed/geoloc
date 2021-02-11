@@ -1,3 +1,11 @@
+"""
+The UBX Streamer is the central piece of this app.
+Its purpose is to establish a two-way communication channel, with the u-blox receiver.
+The Streamer manages the serial connection via the 'connect' and 'disconnect' methods.
+The Streamer manages a thread to send and receive data via the 'start_read_thread' and 'stop_read_thread' methods.
+The Streamer sends data via the 'send' method and parses the data received via the '_read_thread' method (both require a
+thread to be running).
+"""
 from io import BufferedReader
 from threading import Thread
 from time import sleep
@@ -31,23 +39,15 @@ class UBXStreamer:
         self._port = port
         self._baudrate = baudrate
         self._timeout = timeout
-        self.almanac_raw = {i: Almanac_Raw() for i in range(32)}
-        self.almanac_parsed = {i: None for i in range(32)}
-        self.ephemeris_raw = {i: Ephemeris_Raw() for i in range(32)}
-        self.ephemeris_parsed = {i: None for i in range(32)}
-        self.pseudorange = {i: None for i in range(32)}
-        self.snr = {i: None for i in range(32)}
-        self.sat_position = {i: None for i in range(32)}
-        self.clockBias_dist = 0
-        self.receiver_time = 0
-
-    def __del__(self):
-        """
-        Destructor.
-        """
-
-        self.stop_read_thread()
-        self.disconnect()
+        self.almanac_raw = {i: Almanac_Raw() for i in range(32)}  # Almanac_Raw object for each GPS Satellite
+        self.almanac_parsed = {i: None for i in range(32)}  # Almanac_Parsed object for each GPS Satellite
+        self.ephemeris_raw = {i: Ephemeris_Raw() for i in range(32)}  # Ephemeris_Raw object for each GPS Satellite
+        self.ephemeris_parsed = {i: None for i in range(32)}  # Ephemeris_Parsed object for each GPS Satellite
+        self.pseudorange = {i: None for i in range(32)}  # Pseudorange for each GPS Satellite
+        self.snr = {i: None for i in range(32)}  # Signal to Noise Ration for each GPS Satellite
+        self.sat_position = {i: None for i in range(32)}  # Satellite position in the sky for each GPS Satellite
+        self.clockBias_dist = 0  # Clock bias (as a distance in meters)
+        self.receiver_time = 0  # Receiver time in seconds
 
     def connect(self):
         """
@@ -97,31 +97,22 @@ class UBXStreamer:
     def send(self, data1, data2, data3=None):
         """
         Send data to serial connection.
+        The number of data (i.e. UBX messages) in parameters here is arbitrary.
+        There is no theoretical limit, it's up to the user to define how many messages will be sent.
         """
 
         for data in (data1, data2, data3):
             if data is not None:
                 self._serial_object.write(data)
-                sleep(1)
-
-    def flush(self):
-        """
-        Flush input buffer
-        """
-
-        self._serial_object.reset_input_buffer()
-
-    def waiting(self):
-        """
-        Check if any messages remaining in the input buffer
-        """
-
-        return self._serial_object.in_waiting
+                sleep(1)  # Arbitrary timeout to account for delay in getting a response to requests.
+                          # Could theoretically be lower
 
     def _read_thread(self):
         """
         THREADED PROCESS
-        Reads and parses UBX message data from stream
+        Reads and parses UBX message data from the stream.
+        In addition to parsing messages, this method will do further processing for specific messages: UBX-NAV-CLOCK,
+        UBX-RXM-RAW, UBX-AID-ALM, and UBX-AID-EPH. Theoretically, this part could be done elsewhere.
         """
 
         while self._reading and self._serial_object:
@@ -131,8 +122,12 @@ class UBXStreamer:
                     if parsed_data is not None:
                         print(parsed_data)
                     if parsed_data:
+                        """
+                        'parsed_data' is an object which takes all the fields of the UBX message 
+                        (as defined in the U-blox documentation) as attributes.
+                        """
                         if parsed_data.identity == "NAV-CLOCK":
-                            self.clockBias_dist = parsed_data.clkB * (10 ** -9) * C
+                            self.clockBias_dist = parsed_data.clkB * (10 ** -9) * C  # Multiplying to account for units.
                             self.receiver_time = parsed_data.iTOW * (10 ** -3)
                             print("Receiver clock bias: ", self.clockBias_dist)
                             print("GPS System Time: ", self.receiver_time)
@@ -141,13 +136,22 @@ class UBXStreamer:
                         if parsed_data.identity == "RXM-RAW":
                             self.receiver_time = parsed_data.iTOW * (10 ** -3)
                             numSV = parsed_data.numSV
+                            """
+                            The number of attributes for RXM-RAW depends on the amount of satellites detected.
+                            As such, there is a repeated block of attributes indexed from 1 to numSV 
+                            (= number of satellites detected). 
+                            """
                             if numSV != 0:
                                 for i in range(1, numSV + 1):
-                                    cpMes_num = "prMes_0" + str(i) if i < 10 else "cpMes_" + str(i)
+                                    prMes_num = "prMes_0" + str(i) if i < 10 else "prMes_" + str(i)
                                     sv_num = "sv_0" + str(i) if i < 10 else "sv_" + str(i)
                                     snr_num = "cno_0" + str(i) if i < 10 else "cno_" + str(i)
+                                    """
+                                    The satellite identifier 'sv' is indexed from 1, the corresponding python
+                                    dictionary is indexed from 0.
+                                    """
                                     self.pseudorange[int(getattr(parsed_data, sv_num)) - 1] = \
-                                        getattr(parsed_data, cpMes_num)
+                                        getattr(parsed_data, prMes_num)
                                     self.snr[int(getattr(parsed_data, sv_num)) - 1] = getattr(parsed_data, snr_num)
 
                         if parsed_data.identity == "AID-ALM":
